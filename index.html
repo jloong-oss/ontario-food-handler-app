@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ontario Food Handler Certification Training App</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM CDNs -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+  <!-- Babel CDN for JSX -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // --- DATA SOURCES ---
+    const FLASHCARDS = [
+      {
+        question: "What is the Temperature Danger Zone?",
+        answer: "4°C to 60°C (40°F to 140°F). Bacteria multiply rapidly in this range.",
+        ref: "O. Reg. 493/17 s. 27"
+      },
+      {
+        question: "What are the requirements for 3-Sink Manual Sanitizing?",
+        answer: "Sink 3: Clean water at 77°C for 45 sec, OR Chemical solution (100 ppm Chlorine, 200 ppm Quats, or 25 ppm Iodine) at min 24°C for 45 sec.",
+        ref: "O. Reg. 493/17 s. 19"
+      },
+      {
+        question: "Minimum Internal Cooking Temperature for Whole Poultry?",
+        answer: "82°C (180°F) held for at least 15 seconds.",
+        ref: "YorkSafe Guide / CFTS Manual Ch. 4"
+      },
+      {
+        question: "Minimum Internal Cooking Temperature for Ground Poultry & Mixtures?",
+        answer: "74°C (165°F) held for at least 15 seconds.",
+        ref: "YorkSafe Guide / CFTS Manual Ch. 4"
+      },
+      {
+        question: "Minimum Internal Cooking Temperature for Pork & Ground Meat (non-poultry)?",
+        answer: "71°C (160°F) held for at least 15 seconds.",
+        ref: "O. Reg. 493/17 / CFTS Manual Ch. 4"
+      },
+      {
+        question: "What are the rules for cooling hot food safely?",
+        answer: "Cool from 60°C to 20°C within 2 hours, then from 20°C to 4°C within the next 4 hours (Total 6 hrs max).",
+        ref: "YorkSafe Guide (Time & Temp)"
+      },
+      {
+        question: "What is mandatory for Food Handler Certification on-site?",
+        answer: "At least 1 certified food handler or supervisor must be on-site during all operating hours.",
+        ref: "O. Reg. 493/17 s. 32"
+      }
+    ];
+
+    const QUIZ_QUESTIONS = [
+      {
+        id: 1,
+        question: "Under Ontario Regulation 493/17, what is the maximum allowable temperature for storing cold potentially hazardous foods?",
+        options: ["0°C (32°F)", "4°C (40°F)", "10°C (50°F)", "15°C (60°F)"],
+        correct: 1,
+        explanation: "O. Reg. 493/17 Section 27 requires cold potentially hazardous foods to be held at 4°C (40°F) or lower to slow bacterial growth."
+      },
+      {
+        id: 2,
+        question: "Which of the following sanitizer concentrations is correct for manual dishwashing in Sink #3?",
+        options: [
+          "50 ppm Chlorine or 100 ppm Quats",
+          "100 ppm Chlorine, 200 ppm Quats, or 25 ppm Iodine",
+          "200 ppm Chlorine or 50 ppm Iodine",
+          "500 ppm Bleach"
+        ],
+        correct: 1,
+        explanation: "Approved chemical sanitizing standards under Section 19 require 100 ppm available chlorine, 200 ppm Quats, or 25 ppm iodine for a minimum 45-second soak."
+      },
+      {
+        id: 3,
+        question: "What is the correct way to calibrate a dial stem probe thermometer using the Ice Point Method?",
+        options: [
+          "Place in hot tap water and adjust nut to 100°C",
+          "Submerge in a 50/50 slush bath of crushed ice and water, wait for needle to steady, adjust nut to 0°C (32°F)",
+          "Hold in air conditioned room and set to 20°C",
+          "Place in freezer for 1 hour and adjust needle to -18°C"
+        ],
+        correct: 1,
+        explanation: "The ice point method uses a equal mixture of crushed ice and water which stays at exactly 0°C (32°F)."
+      },
+      {
+        id: 4,
+        question: "Where should raw poultry be stored inside a commercial walk-in refrigerator?",
+        options: [
+          "Top shelf above prepared salads",
+          "Middle shelf next to cooked beef",
+          "Bottom shelf below all ready-to-eat and raw foods",
+          "Any shelf as long as it is covered with foil"
+        ],
+        correct: 2,
+        explanation: "Raw poultry has the highest required cooking temperature and risk of Salmonella; storing it on the lowest shelf prevents juices from dripping onto other foods."
+      },
+      {
+        id: 5,
+        question: "When reheating previously cooked and cooled foods for hot holding, what temperature and time must be achieved?",
+        options: [
+          "60°C (140°F) within 4 hours",
+          "74°C (165°F) for 15 seconds within 2 hours",
+          "82°C (180°F) instantly",
+          "71°C (160°F) within 6 hours"
+        ],
+        correct: 1,
+        explanation: "Reheating must be done rapidly (within 2 hours) on a stove/oven to at least 74°C (165°F) to destroy bacteria that multiplied during storage."
+      }
+    ];
+
+    const TEMPERATURE_DATA = [
+      { temp: 82, label: "82°C (180°F)", desc: "Whole Poultry Cook Temp" },
+      { temp: 77, label: "77°C (170°F)", desc: "Hot Water Dish Sanitizing (Sink 3)" },
+      { temp: 74, label: "74°C (165°F)", desc: "Ground Poultry / Reheating / Food Mixtures" },
+      { temp: 71, label: "71°C (160°F)", desc: "Pork / Ground Meats (Pork, Beef, Veal)" },
+      { temp: 70, label: "70°C (158°F)", desc: "Fish & Seafood Cooking Temp" },
+      { temp: 60, label: "60°C (140°F)", desc: "Min Hot Holding Threshold / Upper Danger Zone Limit" },
+      { temp: 4,  label: "4°C (40°F)",   desc: "Max Cold Holding Temp / Lower Danger Zone Limit" },
+      { temp: -18, label: "-18°C (0°F)", desc: "Standard Commercial Freezer Storage" }
+    ];
+
+    // --- MAIN APP COMPONENT ---
+    function App() {
+      const [activeTab, setActiveTab] = useState("cards");
+
+      return (
+        <div className="flex flex-col min-h-screen">
+          {/* Header */}
+          <header className="bg-slate-900 text-white p-4 shadow-md">
+            <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+              <div>
+                <h1 className="text-2xl font-bold text-amber-400">Ontario Food Handler Prep App</h1>
+                <p className="text-xs text-slate-300">Aligned with O. Reg. 493/17 & YorkSafe Training Standards</p>
+              </div>
+              <nav className="flex flex-wrap gap-2">
+                {[
+                  { id: "cards", label: "Flashcards" },
+                  { id: "quiz", label: "Practice Quiz" },
+                  { id: "3sink", label: "3-Sink Sim" },
+                  { id: "fridge", label: "Fridge Stacker" },
+                  { id: "temps", label: "Temp Guide" },
+                  { id: "haccp", label: "HACCP & Checklists" }
+                ].map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                      activeTab === tab.id
+                        ? "bg-amber-500 text-slate-950 font-bold"
+                        : "bg-slate-800 text-slate-200 hover:bg-slate-700"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </header>
+
+          {/* Body Content */}
+          <main className="flex-1 max-w-5xl w-full mx-auto p-4 md:p-6">
+            {activeTab === "cards" && <FlashcardsModule />}
+            {activeTab === "quiz" && <QuizModule />}
+            {activeTab === "3sink" && <ThreeSinkModule />}
+            {activeTab === "fridge" && <FridgeModule />}
+            {activeTab === "temps" && <TemperatureModule />}
+            {activeTab === "haccp" && <HaccpModule />}
+          </main>
+
+          {/* Footer */}
+          <footer className="bg-slate-900 text-slate-400 text-center py-4 text-xs border-t border-slate-800">
+            Study Tool based on Canadian Food Safety Manual (5th Ed.) & York Region Safe Food Handlers Guide (2019).
+          </footer>
+        </div>
+      );
+    }
+
+    // --- MODULE 1: FLASHCARDS ---
+    function FlashcardsModule() {
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [flipped, setFlipped] = useState(false);
+
+      const card = FLASHCARDS[currentIndex];
+
+      const nextCard = () => {
+        setFlipped(false);
+        setCurrentIndex((prev) => (prev + 1) % FLASHCARDS.length);
+      };
+
+      const prevCard = () => {
+        setFlipped(false);
+        setCurrentIndex((prev) => (prev - 1 + FLASHCARDS.length) % FLASHCARDS.length);
+      };
+
+      return (
+        <div className="max-w-xl mx-auto flex flex-col items-center gap-6">
+          <div className="text-center">
+            <h2 className="text-xl font-bold text-slate-900">Core Knowledge Flashcards</h2>
+            <p className="text-sm text-slate-600">Click card to reveal answer and legal reference.</p>
+          </div>
+
+          <div
+            onClick={() => setFlipped(!flipped)}
+            className="w-full h-64 bg-white border-2 border-slate-300 rounded-2xl shadow-lg p-6 flex flex-col justify-between items-center text-center cursor-pointer hover:border-amber-500 transition select-none"
+          >
+            <span className="text-xs font-semibold text-amber-600 uppercase tracking-wide">
+              Card {currentIndex + 1} of {FLASHCARDS.length}
+            </span>
+            <div className="my-auto">
+              {!flipped ? (
+                <p className="text-lg font-bold text-slate-800">{card.question}</p>
+              ) : (
+                <div>
+                  <p className="text-base font-semibold text-slate-900 mb-2">{card.answer}</p>
+                  <span className="inline-block bg-slate-100 text-slate-600 text-xs px-2.5 py-1 rounded-full font-mono border border-slate-300">
+                    {card.ref}
+                  </span>
+                </div>
+              )}
+            </div>
+            <span className="text-xs text-slate-400">
+              {flipped ? "Click to see question" : "Click to flip card"}
+            </span>
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              onClick={prevCard}
+              className="px-4 py-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 text-sm"
+            >
+              Previous
+            </button>
+            <button
+              onClick={nextCard}
+              className="px-4 py-2 bg-amber-500 text-slate-950 font-bold rounded-lg hover:bg-amber-400 text-sm"
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // --- MODULE 2: QUIZ ---
+    function QuizModule() {
+      const [answers, setAnswers] = useState({});
+      const [submitted, setSubmitted] = useState(false);
+
+      const handleSelect = (qId, optionIdx) => {
+        if (submitted) return;
+        setAnswers({ ...answers, [qId]: optionIdx });
+      };
+
+      const calculateScore = () => {
+        let score = 0;
+        QUIZ_QUESTIONS.forEach((q) => {
+          if (answers[q.id] === q.correct) score++;
+        });
+        return score;
+      };
+
+      return (
+        <div className="max-w-3xl mx-auto space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 className="text-xl font-bold text-slate-900 mb-1">Ontario Regulations Practice Exam</h2>
+            <p className="text-sm text-slate-600">Answer all questions to test your knowledge.</p>
+          </div>
+
+          {QUIZ_QUESTIONS.map((q, idx) => (
+            <div key={q.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+              <p className="font-bold text-slate-900 mb-3">{idx + 1}. {q.question}</p>
+              <div className="space-y-2">
+                {q.options.map((opt, optIdx) => {
+                  let btnStyle = "bg-slate-50 border-slate-300 text-slate-800 hover:bg-slate-100";
+                  if (answers[q.id] === optIdx) btnStyle = "bg-amber-100 border-amber-500 text-slate-950 font-semibold";
+                  if (submitted) {
+                    if (optIdx === q.correct) btnStyle = "bg-emerald-100 border-emerald-500 text-emerald-950 font-bold";
+                    else if (answers[q.id] === optIdx) btnStyle = "bg-rose-100 border-rose-500 text-rose-950";
+                  }
+
+                  return (
+                    <button
+                      key={optIdx}
+                      onClick={() => handleSelect(q.id, optIdx)}
+                      className={`w-full text-left p-3 text-sm rounded-lg border transition flex items-center justify-between ${btnStyle}`}
+                    >
+                      <span>{opt}</span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {submitted && (
+                <div className="mt-4 p-3 bg-slate-50 rounded-lg border border-slate-200 text-xs text-slate-700">
+                  <span className="font-bold">Explanation: </span>{q.explanation}
+                </div>
+              )}
+            </div>
+          ))}
+
+          <div className="text-center pt-4">
+            {!submitted ? (
+              <button
+                onClick={() => setSubmitted(true)}
+                disabled={Object.keys(answers).length < QUIZ_QUESTIONS.length}
+                className="px-6 py-3 bg-emerald-600 text-white font-bold rounded-xl shadow hover:bg-emerald-500 disabled:opacity-50 transition"
+              >
+                Submit Exam Answers
+              </button>
+            ) : (
+              <div className="bg-slate-900 text-white p-6 rounded-xl shadow text-center space-y-3">
+                <h3 className="text-2xl font-bold">
+                  Score: {calculateScore()} / {QUIZ_QUESTIONS.length} ({Math.round((calculateScore()/QUIZ_QUESTIONS.length)*100)}%)
+                </h3>
+                <p className="text-sm text-slate-300">
+                  {calculateScore() >= 4 ? "Pass! Outstanding job." : "Review the manual sections and try again."}
+                </p>
+                <button
+                  onClick={() => { setAnswers({}); setSubmitted(false); }}
+                  className="px-4 py-2 bg-amber-500 text-slate-950 font-bold text-sm rounded-lg hover:bg-amber-400"
+                >
+                  Retake Quiz
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // --- MODULE 3: 3-SINK SIMULATOR ---
+    function ThreeSinkModule() {
+      const INITIAL_STEPS = [
+        { id: "sanitize", text: "Sanitize (Sink #3: 77°C Hot Water or Chemical Solution for 45s)" },
+        { id: "wash", text: "Wash (Sink #1: Warm water + detergent at 43°C)" },
+        { id: "scrape", text: "Scrape & Pre-Rinse (Remove food scraps into garbage)" },
+        { id: "airdry", text: "Air Dry (Sloped rack, NEVER towel dry)" },
+        { id: "rinse", text: "Rinse (Sink #2: Clean hot water at 43°C)" }
+      ];
+
+      const CORRECT_ORDER = ["scrape", "wash", "rinse", "sanitize", "airdry"];
+
+      const [userOrder, setUserOrder] = useState(INITIAL_STEPS);
+      const [feedback, setFeedback] = useState(null);
+
+      const moveStep = (index, direction) => {
+        const newOrder = [...userOrder];
+        const targetIndex = index + direction;
+        if (targetIndex < 0 || targetIndex >= newOrder.length) return;
+        const temp = newOrder[index];
+        newOrder[index] = newOrder[targetIndex];
+        newOrder[targetIndex] = temp;
+        setUserOrder(newOrder);
+        setFeedback(null);
+      };
+
+      const checkSequence = () => {
+        const currentIds = userOrder.map(s => s.id);
+        const isCorrect = JSON.stringify(currentIds) === JSON.stringify(CORRECT_ORDER);
+        if (isCorrect) {
+          setFeedback({ success: true, msg: "Correct! Scrape → Wash (43°C) → Rinse (43°C) → Sanitize (77°C / Chemical 45s) → Air Dry." });
+        } else {
+          setFeedback({ success: false, msg: "Incorrect sequence. Remember: always scrape first, wash before rinsing, sanitize before air drying, and NEVER towel dry!" });
+        }
+      };
+
+      return (
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 className="text-xl font-bold text-slate-900 mb-1">Interactive 3-Sink Dishwashing Sequence</h2>
+            <p className="text-sm text-slate-600">Arrange the standard manual dishwashing steps in the legal required order.</p>
+          </div>
+
+          <div className="space-y-3">
+            {userOrder.map((step, idx) => (
+              <div key={step.id} className="bg-white p-4 rounded-xl border border-slate-200 flex items-center justify-between shadow-sm">
+                <span className="font-bold text-amber-600 text-sm w-8">#{idx + 1}</span>
+                <span className="flex-1 text-sm font-medium text-slate-800 px-2">{step.text}</span>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => moveStep(idx, -1)}
+                    disabled={idx === 0}
+                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded disabled:opacity-30 text-xs font-bold"
+                  >
+                    ▲
+                  </button>
+                  <button
+                    onClick={() => moveStep(idx, 1)}
+                    disabled={idx === userOrder.length - 1}
+                    className="px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded disabled:opacity-30 text-xs font-bold"
+                  >
+                    ▼
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center space-y-4">
+            <button
+              onClick={checkSequence}
+              className="px-6 py-2.5 bg-slate-900 text-amber-400 font-bold rounded-xl hover:bg-slate-800 transition"
+            >
+              Verify Dishwashing Sequence
+            </button>
+
+            {feedback && (
+              <div className={`p-4 rounded-xl text-sm font-medium border ${feedback.success ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-rose-50 border-rose-300 text-rose-900'}`}>
+                {feedback.msg}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // --- MODULE 4: REFRIGERATOR STACKING ---
+    function FridgeModule() {
+      const ITEMS = [
+        { id: "salad", name: "Prepared Potato Salad", targetShelf: "top", desc: "Ready-to-eat item" },
+        { id: "veggies", name: "Raw Unwashed Carrots", targetShelf: "middle", desc: "Raw produce" },
+        { id: "pork", name: "Raw Pork Chops (Cook to 71°C)", targetShelf: "lower-mid", desc: "Raw ground/whole meat" },
+        { id: "poultry", name: "Raw Chicken Breasts (Cook to 74°C/82°C)", targetShelf: "bottom", desc: "Raw poultry (Highest risk)" }
+      ];
+
+      const [placements, setPlacements] = useState({ top: null, middle: null, "lower-mid": null, bottom: null });
+      const [selectedItem, setSelectedItem] = useState(null);
+      const [status, setStatus] = useState(null);
+
+      const placeItem = (shelfKey) => {
+        if (!selectedItem) return;
+        setPlacements({ ...placements, [shelfKey]: selectedItem });
+        setSelectedItem(null);
+        setStatus(null);
+      };
+
+      const checkFridge = () => {
+        let correct = true;
+        Object.keys(placements).forEach((shelf) => {
+          if (!placements[shelf] || placements[shelf].targetShelf !== shelf) {
+            correct = false;
+          }
+        });
+        if (correct) {
+          setStatus({ success: true, msg: "Perfect Stacking! Ready-to-eat foods on top, raw produce in middle, raw meats on lower shelves, and raw poultry at the very bottom." });
+        } else {
+          setStatus({ success: false, msg: "Cross-contamination hazard! Raw poultry/meats must never be placed above ready-to-eat foods or raw produce." });
+        }
+      };
+
+      return (
+        <div className="max-w-3xl mx-auto space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 className="text-xl font-bold text-slate-900 mb-1">Walk-In Fridge Storage Organizer</h2>
+            <p className="text-sm text-slate-600">Select an item below, then click the correct shelf to store it safely.</p>
+          </div>
+
+          {/* Item Palette */}
+          <div className="flex flex-wrap gap-2 justify-center">
+            {ITEMS.map((item) => {
+              const isPlaced = Object.values(placements).some((p) => p && p.id === item.id);
+              return (
+                <button
+                  key={item.id}
+                  disabled={isPlaced}
+                  onClick={() => setSelectedItem(item)}
+                  className={`p-3 rounded-xl border text-xs font-bold transition ${
+                    isPlaced
+                      ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                      : selectedItem && selectedItem.id === item.id
+                      ? "bg-amber-500 text-slate-950 border-amber-600 ring-2 ring-amber-300"
+                      : "bg-white text-slate-800 border-slate-300 hover:border-amber-400"
+                  }`}
+                >
+                  {item.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Fridge Visual */}
+          <div className="bg-slate-800 p-4 rounded-2xl border-4 border-slate-700 space-y-3">
+            {[
+              { key: "top", label: "Top Shelf (Ready-to-Eat Foods)" },
+              { key: "middle", label: "Middle Shelf (Raw Produce / Vegetables)" },
+              { key: "lower-mid", label: "Lower-Middle Shelf (Raw Pork, Beef, Fish)" },
+              { key: "bottom", label: "Bottom Shelf (Raw Poultry & Chicken)" }
+            ].map((shelf) => (
+              <div
+                key={shelf.key}
+                onClick={() => placeItem(shelf.key)}
+                className="bg-slate-100 border-2 border-dashed border-slate-400 rounded-xl p-4 min-h-[70px] flex justify-between items-center cursor-pointer hover:bg-slate-50 transition"
+              >
+                <span className="text-xs font-bold text-slate-500 uppercase">{shelf.label}</span>
+                {placements[shelf.key] ? (
+                  <span className="bg-emerald-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg">
+                    {placements[shelf.key].name}
+                  </span>
+                ) : (
+                  <span className="text-xs text-slate-400 italic">Click to place selected item</span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div className="text-center space-y-3">
+            <button
+              onClick={checkFridge}
+              className="px-6 py-2.5 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-500 transition"
+            >
+              Check Storage Safety
+            </button>
+            {status && (
+              <div className={`p-4 rounded-xl text-sm font-medium border ${status.success ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-rose-50 border-rose-300 text-rose-900'}`}>
+                {status.msg}
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // --- MODULE 5: TEMPERATURE GUIDE ---
+    function TemperatureModule() {
+      const [filter, setFilter] = useState("all");
+
+      return (
+        <div className="max-w-3xl mx-auto space-y-6">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <h2 className="text-xl font-bold text-slate-900 mb-1">Ontario Critical Temperature Guide</h2>
+            <p className="text-sm text-slate-600">Key temperature thresholds mandated under O. Reg. 493/17 and York Region Public Health.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {TEMPERATURE_DATA.map((item, idx) => (
+              <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center font-bold text-sm text-white shrink-0 ${item.temp >= 60 ? 'bg-rose-600' : item.temp > 0 ? 'bg-amber-500' : 'bg-blue-600'}`}>
+                  {item.temp}°C
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 text-sm">{item.label}</h4>
+                  <p className="text-xs text-slate-600">{item.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-amber-50 border border-amber-300 p-4 rounded-xl text-xs text-amber-950 space-y-1">
+            <p className="font-bold">Temperature Danger Zone Note:</p>
+            <p>Between 4°C and 60°C (40°F to 140°F), pathogenic bacteria double every 20 minutes. Potentially hazardous foods left in this zone for more than 2 hours must be discarded.</p>
+          </div>
+        </div>
+      );
+    }
+
+    // --- MODULE 6: HACCP & CHECKLIST ---
+    function HaccpModule() {
+      return (
+        <div className="max-w-3xl mx-auto space-y-6">
+          {/* HACCP Principles */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-3">
+            <h2 className="text-xl font-bold text-slate-900">7 Principles of HACCP</h2>
+            <ol className="list-decimal list-inside text-sm text-slate-700 space-y-1.5 font-medium">
+              <li>Conduct a Hazard Analysis (Identify biological, chemical, physical, allergen risks).</li>
+              <li>Determine Critical Control Points (CCPs).</li>
+              <li>Establish Critical Limits for each CCP (e.g., Cook whole poultry to 82°C).</li>
+              <li>Establish Monitoring Procedures (e.g., Take probe temp every 2 hours).</li>
+              <li>Establish Corrective Actions (e.g., Continue cooking or discard if time exceeded).</li>
+              <li>Establish Verification Procedures (Supervisor checks logs daily).</li>
+              <li>Establish Record-Keeping and Documentation.</li>
+            </ol>
+          </div>
+
+          {/* Volunteer Checklist */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-3">
+            <h3 className="text-lg font-bold text-slate-900">Church Kitchen Volunteer Safety Checklist</h3>
+            <div className="space-y-2 text-xs text-slate-700">
+              <label className="flex items-center gap-2 p-2 bg-slate-50 rounded border">
+                <input type="checkbox" className="rounded text-amber-500" />
+                <span>Handwash Sink Stocked: Soap dispenser full, paper towels available, hot/cold water operational.</span>
+              </label>
+              <label className="flex items-center gap-2 p-2 bg-slate-50 rounded border">
+                <input type="checkbox" className="rounded text-amber-500" />
+                <span>Refrigerators Check: Internal temperature verified at 4°C (40°F) or lower using display thermometer.</span>
+              </label>
+              <label className="flex items-center gap-2 p-2 bg-slate-50 rounded border">
+                <input type="checkbox" className="rounded text-amber-500" />
+                <span>Dishwashing Setup: Sink #3 sanitizer verified with test strips (100 ppm Bleach / 200 ppm Quats).</span>
+              </label>
+              <label className="flex items-center gap-2 p-2 bg-slate-50 rounded border">
+                <input type="checkbox" className="rounded text-amber-500" />
+                <span>Cross-Contamination Barrier: Separate color-coded cutting boards set up for raw meat vs ready-to-eat produce.</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Render App
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
